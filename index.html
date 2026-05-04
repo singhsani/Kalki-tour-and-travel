@@ -231,12 +231,12 @@
   <script>
     // Array of images for Varanasi tour
 const heroImages = [
-  '../assets/image/lucknow.webp',
-  '../assets/image/ramsita.png',
-  '../assets/image/trivani_sangam.webp',
-  '../assets/image/varans_tour.webp',
-  '../assets/image/Varanasi-scaled.jpg',
-  '../assets/image/uttakhand_image.webp'
+  { url: '../assets/image/lucknow.webp', position: 'left center' },
+  { url: '../assets/image/ramsita.png', position: 'center' },
+  { url: '../assets/image/trivani_sangam.webp', position: 'left center' },
+  { url: '../assets/image/varans_tour.webp', position: 'center' },
+  { url: '../assets/image/Varanasi-scaled.jpg', position: 'left center' },
+  { url: '../assets/image/uttakhand_image.webp', position: 'center' }
 ];
 
 class HeroSlideshow {
@@ -245,109 +245,47 @@ class HeroSlideshow {
     this.currentIndex = 0;
     this.intervalTime = intervalTime;
     this.interval = null;
+    this.slides = [];
     this.init();
   }
 
   init() {
     const hero = document.querySelector('.hero');
-    if (!hero) return; // ✅ FIX 1: Check if hero exists
+    if (!hero) {
+      console.error("Hero element not found");
+      return;
+    }
 
-    // Clear existing slides
-    const existingSlides = hero.querySelectorAll('.hero-slide');
-    existingSlides.forEach(slide => slide.remove());
+    // Clear old slides
+    hero.querySelectorAll('.hero-slide').forEach(s => s.remove());
 
-    // Create slide elements
+    // Create slides
     this.images.forEach((img, index) => {
       const slide = document.createElement('div');
       slide.className = 'hero-slide';
+
+      slide.style.backgroundImage = `url(${img.url})`;
+      slide.style.backgroundPosition = img.position || 'center';
+
       if (index === 0) slide.classList.add('active');
-      slide.style.backgroundImage = `url('${img}')`;
+
       hero.appendChild(slide);
+      this.slides.push(slide);
     });
 
-    // Add navigation dots
-    this.addDots();
-
-    // Add prev/next buttons
-    this.addButtons();
-
-    // Start auto-slideshow
+    this.addDots(hero);
+    this.addButtons(hero);
     this.startAutoSlide();
   }
 
-  addDots() {
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
-
-    const existingDots = hero.querySelector('.slider-dots');
-    if (existingDots) existingDots.remove();
-
-    const dotsContainer = document.createElement('div');
-    dotsContainer.className = 'slider-dots';
-
-    this.images.forEach((_, index) => {
-      const dot = document.createElement('div');
-      dot.className = 'dot';
-      if (index === this.currentIndex) dot.classList.add('active');
-      dot.addEventListener('click', () => this.goToSlide(index));
-      dotsContainer.appendChild(dot);
-    });
-
-    hero.appendChild(dotsContainer);
-  }
-
-  addButtons() {
-    const hero = document.querySelector('.hero');
-    if (!hero) return;
-
-    // Remove existing buttons
-    const existingPrev = hero.querySelector('.prev-btn');
-    const existingNext = hero.querySelector('.next-btn');
-    if (existingPrev) existingPrev.remove();
-    if (existingNext) existingNext.remove();
-
-    // Prev button
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'slider-btn prev-btn';
-    prevBtn.innerHTML = '❮';
-    prevBtn.addEventListener('click', () => this.prevSlide());
-
-    // Next button
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'slider-btn next-btn';
-    nextBtn.innerHTML = '❯';
-    nextBtn.addEventListener('click', () => this.nextSlide());
-
-    hero.appendChild(prevBtn);
-    hero.appendChild(nextBtn);
-  }
-
   goToSlide(index) {
-    const allSlides = document.querySelectorAll('.hero-slide');
-    if (allSlides.length === 0) return;
-
-    // Reset zoom on current slide
-    const currentSlide = document.querySelector('.hero-slide.active');
-    if (currentSlide) {
-      currentSlide.classList.remove('active');
-      currentSlide.style.transform = 'scale(1)';
-    }
+    this.slides[this.currentIndex].classList.remove('active');
 
     this.currentIndex = (index + this.images.length) % this.images.length;
 
-    // Activate new slide with zoom
-    const newSlide = allSlides[this.currentIndex];
-    if (newSlide) {
-      newSlide.classList.add('active');
-      // Force reflow to restart transition
-      void newSlide.offsetWidth;
-      newSlide.style.transform = 'scale(1.04)';
-    }
+    this.slides[this.currentIndex].classList.add('active');
 
-    // Update dots
     this.updateDots();
-
-    // Reset timer
     this.resetAutoSlide();
   }
 
@@ -359,36 +297,59 @@ class HeroSlideshow {
     this.goToSlide(this.currentIndex - 1);
   }
 
+  addDots(hero) {
+    const container = document.createElement('div');
+    container.className = 'slider-dots';
+
+    this.dots = [];
+
+    this.images.forEach((_, i) => {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      if (i === 0) dot.classList.add('active');
+
+      dot.onclick = () => this.goToSlide(i);
+
+      container.appendChild(dot);
+      this.dots.push(dot);
+    });
+
+    hero.appendChild(container);
+  }
+
   updateDots() {
-    const dots = document.querySelectorAll('.dot');
-    dots.forEach((dot, index) => {
-      if (index === this.currentIndex) {
-        dot.classList.add('active');
-      } else {
-        dot.classList.remove('active');
-      }
+    this.dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.currentIndex);
     });
   }
 
+  addButtons(hero) {
+    const prev = document.createElement('button');
+    prev.className = 'slider-btn prev-btn';
+    prev.innerHTML = '❮';
+    prev.onclick = () => this.prevSlide();
+
+    const next = document.createElement('button');
+    next.className = 'slider-btn next-btn';
+    next.innerHTML = '❯';
+    next.onclick = () => this.nextSlide();
+
+    hero.append(prev, next);
+  }
+
   startAutoSlide() {
-    this.interval = setInterval(() => {
-      this.nextSlide();
-    }, this.intervalTime);
+    this.interval = setInterval(() => this.nextSlide(), this.intervalTime);
   }
 
   resetAutoSlide() {
-    if (this.interval) {
-      clearInterval(this.interval);
-    }
+    clearInterval(this.interval);
     this.startAutoSlide();
   }
 }
 
-//  FIX 2: Check if element exists before slideshow initialization
+/* INIT */
 document.addEventListener('DOMContentLoaded', () => {
-  if (document.querySelector('.hero')) {
-    const slideshow = new HeroSlideshow(heroImages, 5000);
-  }
+  new HeroSlideshow(heroImages, 4000);
 });
 
 //  FIX 3: Dropdown toggle for mobile
